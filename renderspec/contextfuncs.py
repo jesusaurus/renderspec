@@ -47,6 +47,29 @@ def _context_fetch_source(context, url):
     return url
 
 
+def _context_git_source(context, uri, rev='master'):
+    """clone the given ref into the output_dir and return the rev"""
+    if not utils._has_git():
+        raise TemplateRuntimeError("Context function 'git_source' requires"
+                                   " gitpython but it could not be imported")
+
+    _context_check_variable(context, CONTEXT_VAR_PYPI_NAME,
+                            'pypi_name')
+    prj_name = context.vars[CONTEXT_VAR_PYPI_NAME]
+    out_dir = context['output_dir']
+
+    if out_dir:
+        src_dir = os.path.join(out_dir, prj_name)
+        sha = utils._git_repo(src_dir, uri, rev)
+
+        tarname = '-'.join([prj_name, sha])
+        utils._create_archive(tarname, 'gztar', out_dir, prj_name)
+
+        return sha
+
+    return rev
+
+
 def _context_url_pypi(context):
     """return the full sdist pypi url"""
     # we need the pypi_name and the upstream_version variables to construct
@@ -286,6 +309,11 @@ def _globals_fetch_source(context, url):
 
 
 @contextfunction
+def _globals_git_source(context, uri, rev='master'):
+    return _context_git_source(context, uri, rev)
+
+
+@contextfunction
 def _globals_url_pypi(context):
     return _context_url_pypi(context)
 
@@ -334,4 +362,5 @@ def env_register_filters_and_globals(env):
     env.globals['license'] = _globals_license_spdx
     env.globals['upstream_version'] = _globals_upstream_version
     env.globals['fetch_source'] = _globals_fetch_source
+    env.globals['git_source'] = _globals_git_source
     env.globals['url_pypi'] = _globals_url_pypi

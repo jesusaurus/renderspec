@@ -24,14 +24,52 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+try:
+    from git import Repo
+except ImportError:
+    Repo = None
 
 import six
 from six.moves.urllib.request import urlopen
 
 
+def _has_git():
+    return Repo is not None
+
+
+def _git_repo(dest_dir, source_uri, rev='master'):
+    """ensure that the given directory is a clone of the given
+    repository at the given revision"""
+    if Repo is None:
+        raise ImportError("gitpython is not required but not available")
+
+    if os.path.isdir(dest_dir):
+        try:
+            repo = Repo(dest_dir)
+        except Exception:
+            shutil.rmtree(dest_dir)
+            repo = Repo.clone_from(source_uri, dest_dir)
+    elif os.path.exists(dest_dir):
+        os.remove(dest_dir)
+        repo = Repo.clone_from(source_uri, dest_dir)
+    else:
+        repo = Repo.clone_from(source_uri, dest_dir)
+
+    commit = repo.rev_parse(rev)
+    sha = commit.hexsha[:7]
+    repo.head.reset(commit=commit, working_tree=True)
+
+    return sha
+
+
+def _create_archive(outname, fmt, outdir, prjdir):
+    """create an archive of the given directory"""
+    shutil.make_archive(outname, fmt, outdir, prjdir)
+
+
 def _download_file(url, dest_dir, dest_filename):
     """download a given url to a given destination directory and
-    destination filenamee"""
+    destination filename"""
     filename = os.path.join(dest_dir, dest_filename)
     with closing(urlopen(url)) as response:  # nosec
         with open(filename, 'wb') as f:

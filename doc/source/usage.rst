@@ -401,6 +401,23 @@ which then renders to::
   Source0: oslo.log-master.tar.gz
 
 
+context function `git_source`
+*******************************
+The function `git_source` clones the given repo into the `output_dir` (that's
+the directory where the rendered .spec file will be in) at the specified
+revision (or `master` if none was given), then creates an archive of the tree.
+The return value is the short sha of the resulting HEAD. If `output_dir` is
+not available (that's the case when `renderspec` writes the rendered spec to
+stdout) the clone and archive are skipped::
+
+  {% set git_sha = git_source('https://opendev.org/airship/armada.git', 'master') %}
+  Source0: {{ pypi_name }}-{{ git_sha }}.tar.gz
+
+which renders to::
+
+  Source0: armada-aa75c3e.tar.gz
+
+
 distribution specific blocks & child templates
 **********************************************
 
